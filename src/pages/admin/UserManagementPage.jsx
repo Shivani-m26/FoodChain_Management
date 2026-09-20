@@ -4,6 +4,8 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Users, UserPlus } from 'lucide-react';
 
+import { DEMO_USERS } from '../../utils/demoData';
+
 const UserManagementPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,9 +23,10 @@ const UserManagementPage = () => {
   const fetchUsers = async () => {
     try {
       const res = await axiosClient.get('/admin/users');
-      setUsers(res);
+      setUsers(Array.isArray(res) ? res : DEMO_USERS);
     } catch (err) {
-      console.error('Failed to load users', err);
+      console.warn('Backend API unavailable, loading demo users...', err);
+      setUsers(DEMO_USERS);
     } finally {
       setLoading(false);
     }

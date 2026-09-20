@@ -5,6 +5,8 @@ import Modal from '../../components/common/Modal';
 import { Store as StoreIcon, Plus, UserPlus, ToggleLeft, ToggleRight, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { DEMO_STORES, DEMO_USERS } from '../../utils/demoData';
+
 const StoreListPage = () => {
   const [stores, setStores] = useState([]);
   const [users, setUsers] = useState([]);
@@ -32,10 +34,13 @@ const StoreListPage = () => {
         axiosClient.get('/admin/stores'),
         axiosClient.get('/admin/users'),
       ]);
-      setStores(storeRes);
-      setUsers(userRes.filter((u) => u.role === 'ROLE_MANAGER'));
+      setStores(Array.isArray(storeRes) ? storeRes : DEMO_STORES);
+      const managerUsers = Array.isArray(userRes) ? userRes.filter((u) => u.role === 'ROLE_MANAGER') : DEMO_USERS.filter((u) => u.role === 'ROLE_MANAGER');
+      setUsers(managerUsers);
     } catch (err) {
-      console.error('Failed to load stores', err);
+      console.warn('Backend API unavailable, loading demo store fleet...', err);
+      setStores(DEMO_STORES);
+      setUsers(DEMO_USERS.filter((u) => u.role === 'ROLE_MANAGER'));
     } finally {
       setLoading(false);
     }

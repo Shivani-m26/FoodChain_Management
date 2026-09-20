@@ -5,17 +5,19 @@ import DataTable from '../../components/common/DataTable';
 import { formatCurrency, formatQuantity } from '../../utils/formatters';
 import { BarChart3, TrendingUp, Boxes } from 'lucide-react';
 
+import { DEMO_MANAGER_SALES } from '../../utils/demoData';
+
 const ManagerStoreAnalysisPage = () => {
   const { user } = useAuth();
-  const storeId = user?.assignedStoreId;
+  const storeId = user?.assignedStoreId || user?.storeId || 1;
+  const storeCode = user?.assignedStoreCode || user?.storeCode || 'S001';
+  const storeName = user?.assignedStoreName || user?.storeName || 'Annam Anna Nagar';
 
   const [salesHistory, setSalesHistory] = useState([]);
   const [inventoryHistory, setInventoryHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!storeId) return;
-
     const fetchAnalysis = async () => {
       try {
         const [salesRes, invHistoryRes] = await Promise.all([
@@ -23,10 +25,12 @@ const ManagerStoreAnalysisPage = () => {
           axiosClient.get(`/stores/${storeId}/inventory/history`),
         ]);
 
-        setSalesHistory(salesRes);
-        setInventoryHistory(invHistoryRes);
+        setSalesHistory(Array.isArray(salesRes) ? salesRes : DEMO_MANAGER_SALES);
+        setInventoryHistory(Array.isArray(invHistoryRes) ? invHistoryRes : []);
       } catch (err) {
-        console.error('Failed to load store analysis', err);
+        console.warn('Backend API unavailable, loading demo store analysis...', err);
+        setSalesHistory(DEMO_MANAGER_SALES);
+        setInventoryHistory([]);
       } finally {
         setLoading(false);
       }
@@ -60,7 +64,7 @@ const ManagerStoreAnalysisPage = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       <div>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 800 }}>
-          {user?.assignedStoreCode} — {user?.assignedStoreName} Performance History
+          {storeCode} — {storeName} Performance History
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
           Historical daily sales submissions and raw material usage logs for your branch

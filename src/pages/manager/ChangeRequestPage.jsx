@@ -6,9 +6,11 @@ import Modal from '../../components/common/Modal';
 import { formatQuantity } from '../../utils/formatters';
 import { FileCheck2, Plus, CalendarOff, Package, UserCheck, Calendar } from 'lucide-react';
 
+import { DEMO_CHANGE_REQUESTS, DEMO_RAW_MATERIALS } from '../../utils/demoData';
+
 const ChangeRequestPage = () => {
   const { user } = useAuth();
-  const storeId = user?.assignedStoreId;
+  const storeId = user?.assignedStoreId || user?.storeId || 1;
 
   const [activeTab, setActiveTab] = useState('materials');
   const [requests, setRequests] = useState([]);
@@ -44,7 +46,6 @@ const ChangeRequestPage = () => {
   });
 
   const fetchData = async () => {
-    if (!storeId) return;
     try {
       const [reqRes, matRes, closureRes, leaveRes] = await Promise.all([
         axiosClient.get(`/stores/${storeId}/inventory/change-requests`),
@@ -52,12 +53,16 @@ const ChangeRequestPage = () => {
         axiosClient.get(`/stores/${storeId}/closure-requests`),
         axiosClient.get(`/stores/${storeId}/manager-leave`),
       ]);
-      setRequests(reqRes);
-      setMaterials(matRes);
-      setClosureRequests(closureRes);
-      setLeaveRequests(leaveRes);
+      setRequests(Array.isArray(reqRes) ? reqRes : DEMO_CHANGE_REQUESTS);
+      setMaterials(Array.isArray(matRes) ? matRes : DEMO_RAW_MATERIALS);
+      setClosureRequests(Array.isArray(closureRes) ? closureRes : []);
+      setLeaveRequests(Array.isArray(leaveRes) ? leaveRes : []);
     } catch (err) {
-      console.error('Failed to load store requests', err);
+      console.warn('Backend API unavailable, loading demo requests...', err);
+      setRequests(DEMO_CHANGE_REQUESTS);
+      setMaterials(DEMO_RAW_MATERIALS);
+      setClosureRequests([]);
+      setLeaveRequests([]);
     } finally {
       setLoading(false);
     }

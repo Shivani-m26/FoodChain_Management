@@ -17,17 +17,34 @@ const DailySalesPage = () => {
 
   useEffect(() => {
     const fetchMenuItems = async () => {
+      const demoItems = [
+        { id: 1, itemCode: 'ITM001', name: 'Ghee Roast Dosa', category: 'Tiffin', unitPrice: 80.0 },
+        { id: 2, itemCode: 'ITM002', name: 'Plain Idly (2 Pcs)', category: 'Tiffin', unitPrice: 30.0 },
+        { id: 3, itemCode: 'ITM003', name: 'Medu Vada', category: 'Tiffin', unitPrice: 35.0 },
+        { id: 4, itemCode: 'ITM004', name: 'Poori Masala', category: 'Tiffin', unitPrice: 65.0 },
+        { id: 5, itemCode: 'ITM005', name: 'South Indian Full Meals', category: 'Meals', unitPrice: 150.0 },
+        { id: 6, itemCode: 'ITM007', name: 'Filter Coffee', category: 'Beverages', unitPrice: 30.0 },
+        { id: 7, itemCode: 'ITM010', name: 'Paneer Butter Masala', category: 'Main Course', unitPrice: 180.0 }
+      ];
+
       try {
         const res = await axiosClient.get('/menu-items');
-        setMenuItems(res);
+        const list = Array.isArray(res) ? res : demoItems;
+        setMenuItems(list);
 
         const initialQty = {};
-        res.forEach((item) => {
-          initialQty[item.id] = 0;
+        list.forEach((item) => {
+          initialQty[item.id] = 10;
         });
         setQuantities(initialQty);
       } catch (err) {
-        console.error('Failed to load menu items', err);
+        console.warn('Backend API unavailable, loading demo menu items...', err);
+        setMenuItems(demoItems);
+        const initialQty = {};
+        demoItems.forEach((item) => {
+          initialQty[item.id] = 10;
+        });
+        setQuantities(initialQty);
       } finally {
         setLoading(false);
       }

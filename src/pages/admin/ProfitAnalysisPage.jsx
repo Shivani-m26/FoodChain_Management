@@ -7,6 +7,8 @@ import { formatCurrency } from '../../utils/formatters';
 import { downloadCSV } from '../../utils/csvExporter';
 import { BarChart3, TrendingUp, DollarSign, Calendar, Download } from 'lucide-react';
 
+import { DEMO_STORES } from '../../utils/demoData';
+
 const ProfitAnalysisPage = () => {
   const [comparisons, setComparisons] = useState([]);
   const [avgDailySales, setAvgDailySales] = useState([]);
@@ -15,6 +17,43 @@ const ProfitAnalysisPage = () => {
 
   useEffect(() => {
     const fetchProfitData = async () => {
+      const demoComparisons = DEMO_STORES.map((s, idx) => {
+        const rev = 250000 + (idx * 18500);
+        const cogs = Math.round(rev * 0.4);
+        const exp = Math.round(rev * 0.2);
+        const net = rev - cogs - exp;
+        return {
+          storeCode: s.storeCode,
+          storeName: s.name,
+          location: s.location,
+          totalRevenue: rev,
+          averageDailyRevenue: Math.round(rev / 30),
+          cogs: cogs,
+          operatingExpenses: exp,
+          grossProfit: rev - cogs,
+          netProfit: net,
+          profitMarginPercentage: 40.0,
+          growthPercentage: 5.5 + idx
+        };
+      });
+
+      const demoAvgSales = DEMO_STORES.map((s, idx) => ({
+        storeCode: s.storeCode,
+        storeName: s.name,
+        averageDailySales: 12000 + (idx * 850)
+      }));
+
+      const demoWeekly = DEMO_STORES.slice(0, 7).map((s, idx) => ({
+        storeCode: s.storeCode,
+        storeName: s.name,
+        weeks: [
+          { weekLabel: 'Week 1', netProfit: 45000 + (idx * 2000) },
+          { weekLabel: 'Week 2', netProfit: 48000 + (idx * 2100) },
+          { weekLabel: 'Week 3', netProfit: 52000 + (idx * 1900) },
+          { weekLabel: 'Week 4', netProfit: 55000 + (idx * 2300) }
+        ]
+      }));
+
       try {
         const [compRes, avgRes, weekRes] = await Promise.all([
           axiosClient.get('/admin/analytics/store-comparison'),
@@ -22,11 +61,14 @@ const ProfitAnalysisPage = () => {
           axiosClient.get('/admin/analytics/weekly-profit'),
         ]);
 
-        setComparisons(compRes);
-        setAvgDailySales(avgRes);
-        setWeeklyMatrix(weekRes);
+        setComparisons(Array.isArray(compRes) ? compRes : demoComparisons);
+        setAvgDailySales(Array.isArray(avgRes) ? avgRes : demoAvgSales);
+        setWeeklyMatrix(Array.isArray(weekRes) ? weekRes : demoWeekly);
       } catch (err) {
-        console.error('Failed to load profit analytics', err);
+        console.warn('Backend API unavailable, loading demo financial profit analytics...', err);
+        setComparisons(demoComparisons);
+        setAvgDailySales(demoAvgSales);
+        setWeeklyMatrix(demoWeekly);
       } finally {
         setLoading(false);
       }

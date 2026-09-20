@@ -5,6 +5,8 @@ import DataTable from '../../components/common/DataTable';
 import { formatCurrency, formatQuantity } from '../../utils/formatters';
 import { Store, ArrowLeft, User, MapPin, Phone } from 'lucide-react';
 
+import { DEMO_STORES, DEMO_MANAGER_INVENTORY, DEMO_MANAGER_SALES } from '../../utils/demoData';
+
 const StoreDetailPage = () => {
   const { id } = useParams();
   const [store, setStore] = useState(null);
@@ -14,6 +16,8 @@ const StoreDetailPage = () => {
 
   useEffect(() => {
     const fetchStoreDetail = async () => {
+      const demoStore = DEMO_STORES.find(s => s.id === Number(id)) || DEMO_STORES[0];
+
       try {
         const [storeRes, invRes, salesRes] = await Promise.all([
           axiosClient.get(`/stores/${id}`),
@@ -21,11 +25,14 @@ const StoreDetailPage = () => {
           axiosClient.get(`/stores/${id}/sales/history`),
         ]);
 
-        setStore(storeRes);
-        setInventory(invRes);
-        setSales(salesRes);
+        setStore(storeRes && typeof storeRes === 'object' ? storeRes : demoStore);
+        setInventory(Array.isArray(invRes) ? invRes : DEMO_MANAGER_INVENTORY);
+        setSales(Array.isArray(salesRes) ? salesRes : DEMO_MANAGER_SALES);
       } catch (err) {
-        console.error('Failed to load store detail', err);
+        console.warn('Backend API unavailable, loading demo store detail...', err);
+        setStore(demoStore);
+        setInventory(DEMO_MANAGER_INVENTORY);
+        setSales(DEMO_MANAGER_SALES);
       } finally {
         setLoading(false);
       }

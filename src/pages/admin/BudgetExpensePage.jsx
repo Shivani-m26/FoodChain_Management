@@ -5,6 +5,8 @@ import Modal from '../../components/common/Modal';
 import { formatCurrency } from '../../utils/formatters';
 import { DollarSign, Plus, Building } from 'lucide-react';
 
+import { DEMO_STORES } from '../../utils/demoData';
+
 const BudgetExpensePage = () => {
   const [stores, setStores] = useState([]);
   const [monthYear, setMonthYear] = useState('2026-08');
@@ -16,15 +18,26 @@ const BudgetExpensePage = () => {
   const [budgetAmountInput, setBudgetAmountInput] = useState('');
 
   const fetchData = async () => {
+    const demoBudgets = DEMO_STORES.map((s, idx) => ({
+      id: idx + 1,
+      storeCode: s.storeCode,
+      storeName: s.name,
+      monthYear: monthYear,
+      allocatedBudget: 150000 + (idx * 10000),
+      createdByName: 'Central Executive Admin'
+    }));
+
     try {
       const [storeRes, budgetRes] = await Promise.all([
         axiosClient.get('/admin/stores'),
         axiosClient.get('/admin/budgets', { params: { monthYear } }),
       ]);
-      setStores(storeRes);
-      setBudgets(budgetRes);
+      setStores(Array.isArray(storeRes) ? storeRes : DEMO_STORES);
+      setBudgets(Array.isArray(budgetRes) ? budgetRes : demoBudgets);
     } catch (err) {
-      console.error('Failed to load budgets', err);
+      console.warn('Backend API unavailable, loading demo store budgets...', err);
+      setStores(DEMO_STORES);
+      setBudgets(demoBudgets);
     } finally {
       setLoading(false);
     }

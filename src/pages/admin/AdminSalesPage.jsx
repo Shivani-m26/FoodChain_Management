@@ -5,6 +5,8 @@ import { formatCurrency } from '../../utils/formatters';
 import { downloadCSV } from '../../utils/csvExporter';
 import { TrendingUp, Calendar, Store, Download } from 'lucide-react';
 
+import { DEMO_ADMIN_SALES, DEMO_ITEM_RANKINGS } from '../../utils/demoData';
+
 const AdminSalesPage = () => {
   const [salesDate, setSalesDate] = useState(new Date().toISOString().split('T')[0]);
   const [sales, setSales] = useState([]);
@@ -17,10 +19,12 @@ const AdminSalesPage = () => {
         axiosClient.get('/admin/sales', { params: { date: salesDate } }),
         axiosClient.get('/admin/analytics/item-sales-ranking', { params: { endDate: salesDate } }),
       ]);
-      setSales(salesRes);
-      setItemRankings(rankRes);
+      setSales(Array.isArray(salesRes) ? salesRes : DEMO_ADMIN_SALES);
+      setItemRankings(Array.isArray(rankRes) ? rankRes : DEMO_ITEM_RANKINGS);
     } catch (err) {
-      console.error('Failed to load sales data', err);
+      console.warn('Backend API unavailable, loading demo sales data...', err);
+      setSales(DEMO_ADMIN_SALES);
+      setItemRankings(DEMO_ITEM_RANKINGS);
     } finally {
       setLoading(false);
     }

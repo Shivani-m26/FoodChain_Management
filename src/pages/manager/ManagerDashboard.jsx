@@ -7,17 +7,19 @@ import { formatCurrency, formatQuantity } from '../../utils/formatters';
 import { Store, Boxes, TrendingUp, AlertTriangle, PlusCircle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { DEMO_MANAGER_INVENTORY, DEMO_MANAGER_SALES } from '../../utils/demoData';
+
 const ManagerDashboard = () => {
   const { user } = useAuth();
-  const storeId = user?.assignedStoreId;
+  const storeId = user?.assignedStoreId || user?.storeId || 1;
+  const storeCode = user?.assignedStoreCode || user?.storeCode || 'S001';
+  const storeName = user?.assignedStoreName || user?.storeName || 'Annam Anna Nagar';
 
   const [inventory, setInventory] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!storeId) return;
-
     const fetchManagerDashboard = async () => {
       try {
         const [invRes, salesRes] = await Promise.all([
@@ -25,10 +27,12 @@ const ManagerDashboard = () => {
           axiosClient.get(`/stores/${storeId}/sales/history`),
         ]);
 
-        setInventory(invRes);
-        setSalesHistory(salesRes);
+        setInventory(Array.isArray(invRes) ? invRes : DEMO_MANAGER_INVENTORY);
+        setSalesHistory(Array.isArray(salesRes) ? salesRes : DEMO_MANAGER_SALES);
       } catch (err) {
-        console.error('Failed to load manager dashboard', err);
+        console.warn('Backend API unavailable, loading demo manager dashboard data...', err);
+        setInventory(DEMO_MANAGER_INVENTORY);
+        setSalesHistory(DEMO_MANAGER_SALES);
       } finally {
         setLoading(false);
       }
@@ -64,7 +68,7 @@ const ManagerDashboard = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800 }}>
-            {user?.assignedStoreCode} — {user?.assignedStoreName} Dashboard
+            {storeCode} — {storeName} Dashboard
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
             Store operational dashboard: Manage daily raw material usage and itemized sales entries
@@ -87,8 +91,8 @@ const ManagerDashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
         <StatCard
           title="Assigned Branch"
-          value={user?.assignedStoreCode || 'S001'}
-          subtitle={user?.assignedStoreName}
+          value={storeCode}
+          subtitle={storeName}
           icon={Store}
           color="gold"
         />

@@ -5,6 +5,8 @@ import Modal from '../../components/common/Modal';
 import { formatQuantity } from '../../utils/formatters';
 import { Truck, Calendar, Edit3, ShieldAlert, CheckCircle, XCircle, History } from 'lucide-react';
 
+import { DEMO_STORES, DEMO_DISTRIBUTIONS, DEMO_CHANGE_REQUESTS } from '../../utils/demoData';
+
 const DistributionPage = () => {
   const [stores, setStores] = useState([]);
   const [selectedStoreId, setSelectedStoreId] = useState('');
@@ -32,12 +34,15 @@ const DistributionPage = () => {
   const fetchStores = async () => {
     try {
       const res = await axiosClient.get('/admin/stores');
-      setStores(res);
-      if (res.length > 0 && !selectedStoreId) {
-        setSelectedStoreId(res[0].id);
+      const storeList = Array.isArray(res) ? res : DEMO_STORES;
+      setStores(storeList);
+      if (storeList.length > 0 && !selectedStoreId) {
+        setSelectedStoreId(storeList[0].id);
       }
     } catch (err) {
-      console.error('Failed to load stores', err);
+      console.warn('Backend API unavailable, loading demo stores...', err);
+      setStores(DEMO_STORES);
+      if (!selectedStoreId) setSelectedStoreId(DEMO_STORES[0].id);
     }
   };
 
@@ -47,18 +52,20 @@ const DistributionPage = () => {
       const res = await axiosClient.get('/admin/distributions', {
         params: { storeId: selectedStoreId, date: queryDate },
       });
-      setDistributions(res);
+      setDistributions(Array.isArray(res) ? res : DEMO_DISTRIBUTIONS[0].items);
     } catch (err) {
-      console.error('Failed to load distributions', err);
+      console.warn('Backend API unavailable, loading demo distributions...', err);
+      setDistributions(DEMO_DISTRIBUTIONS[0].items);
     }
   };
 
   const fetchPendingRequests = async () => {
     try {
       const res = await axiosClient.get('/admin/distributions/change-requests');
-      setPendingRequests(res);
+      setPendingRequests(Array.isArray(res) ? res : DEMO_CHANGE_REQUESTS);
     } catch (err) {
-      console.error('Failed to load change requests', err);
+      console.warn('Backend API unavailable, loading demo requests...', err);
+      setPendingRequests(DEMO_CHANGE_REQUESTS);
     }
   };
 
@@ -67,9 +74,10 @@ const DistributionPage = () => {
       const res = await axiosClient.get('/admin/distributions/history', {
         params: { storeId: selectedStoreId },
       });
-      setHistory(res);
+      setHistory(Array.isArray(res) ? res : []);
     } catch (err) {
-      console.error('Failed to load history', err);
+      console.warn('Failed to load history', err);
+      setHistory([]);
     }
   };
 

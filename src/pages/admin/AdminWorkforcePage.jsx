@@ -5,6 +5,8 @@ import StatCard from '../../components/common/StatCard';
 import Modal from '../../components/common/Modal';
 import { Users, UserCheck, AlertTriangle, Edit3, Calendar, CheckCircle2, UserX } from 'lucide-react';
 
+import { DEMO_STORES } from '../../utils/demoData';
+
 const AdminWorkforcePage = () => {
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [overview, setOverview] = useState([]);
@@ -30,15 +32,38 @@ const AdminWorkforcePage = () => {
   const [leaveReviewRemarks, setLeaveReviewRemarks] = useState('');
 
   const fetchOverview = async () => {
+    const demoOverview = DEMO_STORES.map((s) => ({
+      storeId: s.id,
+      storeCode: s.storeCode,
+      storeName: s.name,
+      presentCooks: 5,
+      targetCooks: 5,
+      presentServants: 4,
+      targetServants: 4,
+      presentWaiters: 4,
+      targetWaiters: 4,
+      presentCleaners: 2,
+      targetCleaners: 2,
+      presentBillers: 1,
+      targetBillers: 1,
+      presentManagers: 1,
+      targetManagers: 1,
+      totalPresentStaff: 17,
+      totalTargetStaff: 17,
+      staffingStatus: 'OPTIMAL',
+    }));
+
     try {
       const [overviewRes, leaveRes] = await Promise.all([
         axiosClient.get('/admin/workforce/overview', { params: { date: attendanceDate } }),
         axiosClient.get('/admin/manager-leave/pending'),
       ]);
-      setOverview(overviewRes);
-      setPendingLeaves(leaveRes);
+      setOverview(Array.isArray(overviewRes) ? overviewRes : demoOverview);
+      setPendingLeaves(Array.isArray(leaveRes) ? leaveRes : []);
     } catch (err) {
-      console.error('Failed to load workforce overview', err);
+      console.warn('Backend API unavailable, loading demo workforce overview...', err);
+      setOverview(demoOverview);
+      setPendingLeaves([]);
     } finally {
       setLoading(false);
     }

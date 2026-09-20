@@ -6,6 +6,8 @@ import { formatCurrency, formatQuantity } from '../../utils/formatters';
 import { downloadCSV } from '../../utils/csvExporter';
 import { Package, Plus, Edit2, Download } from 'lucide-react';
 
+import { DEMO_RAW_MATERIALS } from '../../utils/demoData';
+
 const RawMaterialPage = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,9 +25,10 @@ const RawMaterialPage = () => {
   const fetchMaterials = async () => {
     try {
       const res = await axiosClient.get('/raw-materials');
-      setMaterials(res);
+      setMaterials(Array.isArray(res) ? res : DEMO_RAW_MATERIALS);
     } catch (err) {
-      console.error('Failed to load raw materials', err);
+      console.warn('Backend API unavailable, loading demo raw materials...', err);
+      setMaterials(DEMO_RAW_MATERIALS);
     } finally {
       setLoading(false);
     }

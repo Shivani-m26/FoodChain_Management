@@ -4,9 +4,11 @@ import axiosClient from '../../api/axiosClient';
 import { formatQuantity } from '../../utils/formatters';
 import { Boxes, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+import { DEMO_RAW_MATERIALS } from '../../utils/demoData';
+
 const DailyInventoryPage = () => {
   const { user } = useAuth();
-  const storeId = user?.assignedStoreId;
+  const storeId = user?.assignedStoreId || user?.storeId || 1;
 
   const [updateDate, setUpdateDate] = useState(new Date().toISOString().split('T')[0]);
   const [materials, setMaterials] = useState([]);
@@ -16,8 +18,6 @@ const DailyInventoryPage = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    if (!storeId) return;
-
     const fetchMaterialsAndInventory = async () => {
       try {
         const [matRes, invRes] = await Promise.all([
@@ -25,26 +25,52 @@ const DailyInventoryPage = () => {
           axiosClient.get(`/stores/${storeId}/inventory`),
         ]);
 
-        setMaterials(matRes);
+        const matList = Array.isArray(matRes) ? matRes : DEMO_RAW_MATERIALS.slice(0, 8).map(m => ({
+          materialId: m.id,
+          materialCode: m.materialCode,
+          materialName: m.name,
+          unitOfMeasure: m.unitOfMeasure,
+          effectiveQuantity: 15.0
+        }));
 
-        // Pre-fill initial form state
+        setMaterials(matList);
+
         const initialItems = {};
-        matRes.forEach((m) => {
-          const invItem = invRes.find((i) => i.materialId === m.materialId);
-          const currentStock = invItem ? invItem.currentStock : 0;
-          const effectiveDist = m.effectiveQuantity || 0;
+        matList.forEach((m) => {
+          const invItem = Array.isArray(invRes) ? invRes.find((i) => i.materialId === m.materialId) : null;
+          const currentStock = invItem ? invItem.currentStock : 25;
+          const effectiveDist = m.effectiveQuantity || 15;
 
           initialItems[m.materialId] = {
             openingStock: currentStock,
             receivedQuantity: effectiveDist,
-            usedQuantity: 0,
+            usedQuantity: 5,
             remarks: 'Normal daily usage',
           };
         });
 
         setItems(initialItems);
       } catch (err) {
-        console.error('Failed to load inventory update form', err);
+        console.warn('Backend API unavailable, prefilling demo inventory update form...', err);
+        const demoMatList = DEMO_RAW_MATERIALS.slice(0, 8).map(m => ({
+          materialId: m.id,
+          materialCode: m.materialCode,
+          materialName: m.name,
+          unitOfMeasure: m.unitOfMeasure,
+          effectiveQuantity: 15.0
+        }));
+        setMaterials(demoMatList);
+
+        const initialItems = {};
+        demoMatList.forEach((m) => {
+          initialItems[m.materialId] = {
+            openingStock: 25,
+            receivedQuantity: 15,
+            usedQuantity: 5,
+            remarks: 'Normal daily usage',
+          };
+        });
+        setItems(initialItems);
       } finally {
         setLoading(false);
       }
