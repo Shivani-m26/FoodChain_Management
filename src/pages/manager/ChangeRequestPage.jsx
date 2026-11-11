@@ -5,12 +5,12 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { formatQuantity } from '../../utils/formatters';
 import { FileCheck2, Plus, CalendarOff, Package, UserCheck, Calendar } from 'lucide-react';
-
-import { DEMO_CHANGE_REQUESTS, DEMO_RAW_MATERIALS } from '../../utils/demoData';
+import { DEMO_CHANGE_REQUESTS, DEMO_RAW_MATERIALS, DEMO_STORES } from '../../utils/demoData';
 
 const ChangeRequestPage = () => {
   const { user } = useAuth();
-  const storeId = user?.assignedStoreId || user?.storeId || 1;
+  const [stores, setStores] = useState([]);
+  const [activeStoreId, setActiveStoreId] = useState(user?.assignedStoreId || user?.storeId || 1);
 
   const [activeTab, setActiveTab] = useState('materials');
   const [requests, setRequests] = useState([]);
@@ -45,21 +45,48 @@ const ChangeRequestPage = () => {
     actingManagerNote: '',
   });
 
+  // Fetch store fleet
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const res = await axiosClient.get('/admin/stores');
+        if (Array.isArray(res) && res.length > 0) {
+          setStores(res);
+        } else {
+          setStores(DEMO_STORES);
+        }
+      } catch (err) {
+        setStores(DEMO_STORES);
+      }
+    };
+    fetchStores();
+  }, []);
+
+  // When user context updates (e.g. after login), synchronize activeStoreId
+  useEffect(() => {
+    if (user?.assignedStoreId || user?.storeId) {
+      setActiveStoreId(Number(user.assignedStoreId || user.storeId));
+    }
+  }, [user]);
+
   const fetchData = async () => {
     try {
       const [reqRes, matRes, closureRes, leaveRes] = await Promise.all([
-        axiosClient.get(`/stores/${storeId}/inventory/change-requests`),
+        axiosClient.get(`/stores/${activeStoreId}/inventory/change-requests`),
         axiosClient.get('/raw-materials'),
-        axiosClient.get(`/stores/${storeId}/closure-requests`),
-        axiosClient.get(`/stores/${storeId}/manager-leave`),
+        axiosClient.get(`/stores/${activeStoreId}/closure-requests`),
+        axiosClient.get(`/stores/${activeStoreId}/manager-leave`),
       ]);
-      setRequests(Array.isArray(reqRes) ? reqRes : DEMO_CHANGE_REQUESTS);
+
+      const filteredDemoReqs = DEMO_CHANGE_REQUESTS.filter((r) => Number(r.storeId) === Number(activeStoreId));
+      setRequests(Array.isArray(reqRes) ? reqRes : filteredDemoReqs);
       setMaterials(Array.isArray(matRes) ? matRes : DEMO_RAW_MATERIALS);
       setClosureRequests(Array.isArray(closureRes) ? closureRes : []);
       setLeaveRequests(Array.isArray(leaveRes) ? leaveRes : []);
     } catch (err) {
       console.warn('Backend API unavailable, loading demo requests...', err);
-      setRequests(DEMO_CHANGE_REQUESTS);
+      const filteredDemoReqs = DEMO_CHANGE_REQUESTS.filter((r) => Number(r.storeId) === Number(activeStoreId));
+      setRequests(filteredDemoReqs);
       setMaterials(DEMO_RAW_MATERIALS);
       setClosureRequests([]);
       setLeaveRequests([]);
@@ -70,12 +97,14 @@ const ChangeRequestPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [storeId]);
+  }, [activeStoreId]);
 
   const handleMatSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axiosClient.post(`/stores/${storeId}/inventory/change-request`, {
+      const storeIdToUse = Number(activeStoreId || user?.assignedStoreId || user?.storeId || 1);
+      await axiosClient.post(`/stores/${storeIdToUse}/inventory/change-request`, {
+        storeId: storeIdToUse,
         materialId: Number(matFormData.materialId),
         requestDate: matFormData.requestDate,
         requestedQuantity: Number(matFormData.requestedQuantity),
@@ -83,6 +112,12 @@ const ChangeRequestPage = () => {
       });
 
       setIsMatModalOpen(false);
+      setMatFormData({
+        materialId: '',
+        requestDate: new Date().toISOString().split('T')[0],
+        requestedQuantity: '',
+        reason: '',
+      });
       fetchData();
     } catch (err) {
       alert(err.message || 'Failed to submit material change request');
@@ -92,12 +127,17 @@ const ChangeRequestPage = () => {
   const handleClosureSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axiosClient.post(`/stores/${storeId}/closure-requests`, {
+      await axiosClient.post(`/stores/${activeStoreId}/closure-requests`, {
+        storeId: Number(activeStoreId),
         closureDate: closureFormData.closureDate,
         reason: closureFormData.reason,
       });
 
       setIsClosureModalOpen(false);
+      setClosureFormData({
+        closureDate: new Date().toISOString().split('T')[0],
+        reason: '',
+      });
       fetchData();
     } catch (err) {
       alert(err.message || 'Failed to submit store closure request');
@@ -107,7 +147,10 @@ const ChangeRequestPage = () => {
   const handleLeaveSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axiosClient.post(`/stores/${storeId}/manager-leave`, leaveFormData);
+      await axiosClient.post(`/stores/${activeStoreId}/manager-leave`, {
+        storeId: Number(activeStoreId),
+        ...leaveFormData,
+      });
       setIsLeaveModalOpen(false);
       setLeaveFormData({
         startDate: new Date().toISOString().split('T')[0],
@@ -122,7 +165,10 @@ const ChangeRequestPage = () => {
     }
   };
 
+  const currentStore = stores.find((s) => Number(s.id) === Number(activeStoreId));
+
   const matColumns = [
+    { header: 'Store Branch', accessor: (row) => <span style={{ fontWeight: 800, color: 'var(--accent-gold)' }}>{row.storeCode || `S00${row.storeId}`} — {row.storeName || 'Branch'}</span> },
     { header: 'Request Date', accessor: (row) => row.requestDate },
     { header: 'Material Name', accessor: (row) => row.materialName },
     { header: 'Default Allocation', accessor: (row) => formatQuantity(row.defaultQuantity, row.unitOfMeasure), align: 'right' },
@@ -140,6 +186,7 @@ const ChangeRequestPage = () => {
   ];
 
   const closureColumns = [
+    { header: 'Store Branch', accessor: (row) => `${row.storeCode || `S00${row.storeId}`} — ${row.storeName || 'Branch'}` },
     { header: 'Target Closure Date', accessor: (row) => <span style={{ fontWeight: 800, color: 'var(--accent-blue)' }}>{row.closureDate}</span> },
     { header: 'Reason for Closure', accessor: (row) => row.reason },
     {
@@ -154,6 +201,7 @@ const ChangeRequestPage = () => {
   ];
 
   const leaveColumns = [
+    { header: 'Store Branch', accessor: (row) => `${row.storeCode || `S00${row.storeId}`} — ${row.storeName || 'Branch'}` },
     {
       header: 'Leave Dates',
       accessor: (row) => (
@@ -185,34 +233,54 @@ const ChangeRequestPage = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Store & Manager Approval Requests</h1>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 800 }}>
+            {currentStore ? `${currentStore.storeCode} — ${currentStore.name}` : 'Branch Store'} Approval Requests
+          </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
             Submit material allocation deviations, store day closures, or Manager leave requests for Admin approval
           </p>
         </div>
 
-        {activeTab === 'materials' && (
-          <button className="btn btn-primary" onClick={() => setIsMatModalOpen(true)}>
-            <Plus size={16} />
-            <span>New Material Request</span>
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>Active Branch:</label>
+            <select
+              className="form-select"
+              style={{ width: '240px' }}
+              value={activeStoreId}
+              onChange={(e) => setActiveStoreId(Number(e.target.value))}
+            >
+              {stores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.storeCode} — {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {activeTab === 'closures' && (
-          <button className="btn btn-primary" onClick={() => setIsClosureModalOpen(true)}>
-            <CalendarOff size={16} />
-            <span>Request Store Day Closure</span>
-          </button>
-        )}
+          {activeTab === 'materials' && (
+            <button className="btn btn-primary" onClick={() => setIsMatModalOpen(true)}>
+              <Plus size={16} />
+              <span>New Material Request</span>
+            </button>
+          )}
 
-        {activeTab === 'leaves' && (
-          <button className="btn btn-primary" onClick={() => setIsLeaveModalOpen(true)}>
-            <UserCheck size={16} />
-            <span>Request Manager Leave</span>
-          </button>
-        )}
+          {activeTab === 'closures' && (
+            <button className="btn btn-primary" onClick={() => setIsClosureModalOpen(true)}>
+              <CalendarOff size={16} />
+              <span>Request Store Day Closure</span>
+            </button>
+          )}
+
+          {activeTab === 'leaves' && (
+            <button className="btn btn-primary" onClick={() => setIsLeaveModalOpen(true)}>
+              <UserCheck size={16} />
+              <span>Request Manager Leave</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -235,24 +303,39 @@ const ChangeRequestPage = () => {
 
       {activeTab === 'materials' && (
         <div className="glass-card" style={{ padding: '24px' }}>
-          <DataTable columns={matColumns} data={requests} searchPlaceholder="Search material requests..." />
+          <DataTable
+            columns={matColumns}
+            data={requests}
+            searchPlaceholder="Search material requests..."
+            emptyMessage={`No material deviation requests recorded for ${currentStore ? currentStore.name : 'this store'}`}
+          />
         </div>
       )}
 
       {activeTab === 'closures' && (
         <div className="glass-card" style={{ padding: '24px' }}>
-          <DataTable columns={closureColumns} data={closureRequests} searchPlaceholder="Search closure requests..." />
+          <DataTable
+            columns={closureColumns}
+            data={closureRequests}
+            searchPlaceholder="Search closure requests..."
+            emptyMessage={`No store closure requests recorded for ${currentStore ? currentStore.name : 'this store'}`}
+          />
         </div>
       )}
 
       {activeTab === 'leaves' && (
         <div className="glass-card" style={{ padding: '24px' }}>
-          <DataTable columns={leaveColumns} data={leaveRequests} searchPlaceholder="Search leave requests..." />
+          <DataTable
+            columns={leaveColumns}
+            data={leaveRequests}
+            searchPlaceholder="Search leave requests..."
+            emptyMessage={`No manager leave requests recorded for ${currentStore ? currentStore.name : 'this store'}`}
+          />
         </div>
       )}
 
       {/* Material Request Modal */}
-      <Modal isOpen={isMatModalOpen} onClose={() => setIsMatModalOpen(false)} title="Submit Material Deviation Request">
+      <Modal isOpen={isMatModalOpen} onClose={() => setIsMatModalOpen(false)} title={`Submit Material Request for ${currentStore?.storeCode} — ${currentStore?.name}`}>
         <form onSubmit={handleMatSubmit}>
           <div className="form-group">
             <label className="form-label">Select Raw Material</label>
@@ -319,7 +402,7 @@ const ChangeRequestPage = () => {
       </Modal>
 
       {/* Store Closure Modal */}
-      <Modal isOpen={isClosureModalOpen} onClose={() => setIsClosureModalOpen(false)} title="Request Store Day Closure">
+      <Modal isOpen={isClosureModalOpen} onClose={() => setIsClosureModalOpen(false)} title={`Request Store Day Closure: ${currentStore?.storeCode} — ${currentStore?.name}`}>
         <form onSubmit={handleClosureSubmit}>
           <div className="form-group">
             <label className="form-label">Target Closure Date</label>
@@ -356,7 +439,7 @@ const ChangeRequestPage = () => {
       </Modal>
 
       {/* Manager Leave Request Modal */}
-      <Modal isOpen={isLeaveModalOpen} onClose={() => setIsLeaveModalOpen(false)} title="Submit Manager Leave Request">
+      <Modal isOpen={isLeaveModalOpen} onClose={() => setIsLeaveModalOpen(false)} title={`Submit Leave Request: Manager (${currentStore?.storeCode})`}>
         <form onSubmit={handleLeaveSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="form-group">

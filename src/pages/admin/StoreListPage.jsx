@@ -91,7 +91,8 @@ const StoreListPage = () => {
   const columns = [
     {
       header: 'Store Code',
-      accessor: (row) => (
+      accessor: (row) => row.storeCode,
+      render: (row) => (
         <span style={{ fontWeight: 800, color: 'var(--accent-gold)' }}>{row.storeCode}</span>
       ),
     },
@@ -99,7 +100,8 @@ const StoreListPage = () => {
     { header: 'Location', accessor: (row) => row.location },
     {
       header: 'Manager',
-      accessor: (row) => (
+      accessor: (row) => row.managerName || 'Unassigned',
+      render: (row) => (
         row.managerName ? (
           <div>
             <div style={{ fontWeight: 600 }}>{row.managerName}</div>
@@ -112,7 +114,8 @@ const StoreListPage = () => {
     },
     {
       header: 'Status',
-      accessor: (row) => (
+      accessor: (row) => (row.isActive ? 'Active' : 'Inactive'),
+      render: (row) => (
         <span className={`badge ${row.isActive ? 'badge-success' : 'badge-danger'}`}>
           {row.isActive ? 'Active' : 'Inactive'}
         </span>

@@ -110,9 +110,9 @@ export const DEMO_DISTRIBUTIONS = DEMO_STORES.map((s) => ({
 }));
 
 export const DEMO_CHANGE_REQUESTS = [
-  { id: 1, storeCode: 'S001', storeName: 'Annam Anna Nagar', materialName: 'Rice', requestedQty: 50, currentQty: 10, unitOfMeasure: 'KG', reason: 'High weekend demand expected', status: 'PENDING', requestDate: new Date().toISOString().split('T')[0] },
-  { id: 2, storeCode: 'S003', storeName: 'Annam T. Nagar', materialName: 'Pure Cooking Ghee', requestedQty: 15, currentQty: 2, unitOfMeasure: 'KG', reason: 'Low stock alert', status: 'PENDING', requestDate: new Date().toISOString().split('T')[0] },
-  { id: 3, storeCode: 'S008', storeName: 'Annam Coimbatore Main', materialName: 'Filter Coffee Powder', requestedQty: 20, currentQty: 3, unitOfMeasure: 'KG', reason: 'Morning rush replenishment', status: 'PENDING', requestDate: new Date().toISOString().split('T')[0] }
+  { id: 1, storeId: 1, storeCode: 'S001', storeName: 'Annam Anna Nagar', materialId: 1, materialName: 'Rice', requestedQuantity: 50, defaultQuantity: 10, unitOfMeasure: 'KG', reason: 'High weekend demand expected', status: 'PENDING', requestDate: new Date().toISOString().split('T')[0] },
+  { id: 2, storeId: 3, storeCode: 'S003', storeName: 'Annam T. Nagar', materialId: 3, materialName: 'Pure Cooking Ghee', requestedQuantity: 15, defaultQuantity: 2, unitOfMeasure: 'KG', reason: 'Low stock alert', status: 'PENDING', requestDate: new Date().toISOString().split('T')[0] },
+  { id: 3, storeId: 8, storeCode: 'S008', storeName: 'Annam Coimbatore Main', materialId: 8, materialName: 'Filter Coffee Powder', requestedQuantity: 20, defaultQuantity: 3, unitOfMeasure: 'KG', reason: 'Morning rush replenishment', status: 'PENDING', requestDate: new Date().toISOString().split('T')[0] }
 ];
 
 export const DEMO_USERS = [

@@ -1,14 +1,47 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 
-const DataTable = ({ columns, data, searchPlaceholder = 'Search records...', keyField = 'id', emptyMessage = 'No records found' }) => {
+function extractText(node) {
+  if (!node) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join(' ');
+  if (node.props && node.props.children) return extractText(node.props.children);
+  return '';
+}
+
+const DataTable = ({ columns, data = [], searchPlaceholder = 'Search records...', keyField = 'id', emptyMessage = 'No records found' }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredData = data.filter((row) => {
+  const filteredData = (data || []).filter((row) => {
     if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase().trim();
+
+    // 1. Direct row properties search (e.g. storeCode, name, location, materialName, etc.)
+    const matchesDirectly = Object.entries(row).some(([_, val]) => {
+      if (val === null || val === undefined) return false;
+      if (typeof val === 'string' || typeof val === 'number') {
+        return String(val).toLowerCase().includes(term);
+      }
+      return false;
+    });
+    if (matchesDirectly) return true;
+
+    // 2. Column accessor or render check
     return columns.some((col) => {
-      const val = col.accessor ? col.accessor(row) : row[col.key];
-      return String(val || '').toLowerCase().includes(searchTerm.toLowerCase());
+      try {
+        const val = col.accessor ? col.accessor(row) : (col.key ? row[col.key] : null);
+        if (val === null || val === undefined) return false;
+        if (typeof val === 'string' || typeof val === 'number') {
+          return String(val).toLowerCase().includes(term);
+        }
+        if (React.isValidElement(val)) {
+          const text = extractText(val);
+          return text.toLowerCase().includes(term);
+        }
+      } catch (e) {
+        // ignore
+      }
+      return false;
     });
   });
 

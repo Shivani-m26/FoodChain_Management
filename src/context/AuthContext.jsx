@@ -50,21 +50,42 @@ export const AuthProvider = ({ children }) => {
     }
 
     // Fallback for Vercel preview / Standalone demo mode if backend is not deployed online
-    const isAdminUser = username === 'admin' && password === 'admin123';
-    const isManagerUser = (username.startsWith('manager_') || username === 'manager') && password === 'manager123';
+    const isAdminUser = username === 'admin' && (password === 'admin123' || password === 'admin');
+    const isManagerUser =
+      (username.startsWith('manager') || username.includes('manager')) &&
+      (password === 'manager123' || password === 'manager');
 
     if (isAdminUser || isManagerUser) {
       const demoRole = isAdminUser ? 'ROLE_ADMIN' : 'ROLE_MANAGER';
-      const cleanStoreCode = username.replace('manager_', '').replace('manager', 'S001').toUpperCase();
+
+      // Load all registered stores
+      const storedStores =
+        JSON.parse(localStorage.getItem('annam_mock_stores_v4') || 'null') ||
+        JSON.parse(localStorage.getItem('annam_mock_stores_v3') || 'null') ||
+        DEMO_STORES;
+
+      // Extract branch ID / code from username (e.g. manager_14, manager_s014, manager14)
+      const numMatch = username.match(/\d+/);
+      const storeNum = numMatch ? parseInt(numMatch[0], 10) : 1;
+
+      // Match store by id or by storeCode substring
+      const matchedStore =
+        storedStores.find((s) => Number(s.id) === storeNum) ||
+        storedStores.find((s) => s.storeCode.toLowerCase().includes(String(storeNum))) ||
+        storedStores[0];
+
       const demoResponse = {
         token: 'demo-jwt-token-' + Date.now(),
         username: username,
         role: demoRole,
-        fullName: isAdminUser ? 'Central Executive Admin' : `Manager (${cleanStoreCode})`,
+        fullName: isAdminUser ? 'Central Executive Admin' : `Manager (${matchedStore.name})`,
         email: `${username}@geetham.com`,
-        storeId: isAdminUser ? null : 1,
-        storeCode: isAdminUser ? null : cleanStoreCode,
-        storeName: isAdminUser ? null : `Annam ${cleanStoreCode} Store`,
+        storeId: isAdminUser ? null : matchedStore.id,
+        storeCode: isAdminUser ? null : matchedStore.storeCode,
+        storeName: isAdminUser ? null : matchedStore.name,
+        assignedStoreId: isAdminUser ? null : matchedStore.id,
+        assignedStoreCode: isAdminUser ? null : matchedStore.storeCode,
+        assignedStoreName: isAdminUser ? null : matchedStore.name,
       };
       localStorage.setItem('authToken', demoResponse.token);
       localStorage.setItem('userContext', JSON.stringify(demoResponse));
